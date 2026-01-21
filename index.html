@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="tl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filipino 10 - Interactive Reviewer</title>
+    <style>
+        :root {
+            --asul: #0038a8;
+            --pula: #ce1126;
+            --dilaw: #fcd116;
+            --puti: #ffffff;
+        }
+
+        body {
+            background-color: #f7f7f7;
+            font-family: 'Arial Black', Gadget, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .quiz-container {
+            background: var(--puti);
+            width: 95%;
+            max-width: 1000px;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            border-left: 15px solid var(--asul);
+            border-right: 15px solid var(--pula);
+            text-align: center;
+        }
+
+        .progress-text {
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 20px;
+            color: #444;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        /* FONT SIZE 50 PARA SA MGA TANONG */
+        #question-box {
+            font-size: 50px;
+            color: #111;
+            margin: 40px 0;
+            line-height: 1.1;
+            min-height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fffcf0;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px dashed var(--dilaw);
+        }
+
+        .choices-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn-choice {
+            background: var(--puti);
+            border: 4px solid var(--asul);
+            padding: 25px 15px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-choice:hover {
+            background: var(--dilaw);
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        #result-screen { display: none; }
+        
+        .score-display {
+            font-size: 130px;
+            color: var(--asul);
+            margin: 10px 0;
+            text-shadow: 3px 3px var(--dilaw);
+        }
+
+        .rec-box {
+            background: #fff3f3;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: left;
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 22px;
+            border-top: 8px solid var(--pula);
+        }
+
+        @media (max-width: 800px) {
+            #question-box { font-size: 30px; }
+            .choices-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div id="quiz-ui">
+        <div class="progress-text">TANONG <span id="current-idx">1</span> / 50</div>
+        <div id="question-box">Inihahanda ang mga tanong...</div>
+        <div class="choices-grid" id="choices-ui"></div>
+    </div>
+
+    <div id="result-screen">
+        <h1 style="color:var(--asul); font-size: 45px; margin:0;">MABUHAY! 🎉</h1>
+        <p style="font-size: 24px; margin: 10px 0;">Ang iyong nakuhang iskor ay:</p>
+        <div class="score-display" id="score-val">0</div>
+        <div class="rec-box" id="rec-val"></div>
+        <button onclick="location.reload()" style="margin-top:30px; padding:20px 50px; font-size:25px; cursor:pointer; background:var(--pula); color:white; border:none; border-radius:50px; font-weight:bold;">MAG-ARAL MULI</button>
+    </div>
+</div>
+
+<script>
+    // 50 UNIQUE AND REPHRASED QUESTIONS BASED ON THE PDF CONTENT
+    const rawData = [
+        { q: "Aling bahagi ng katawan ni Liongo ang madaling masugatan ng karayom?", a: "Pusod", o: ["Pusod", "Leeg", "Dibdib", "Talampakan"] },
+        { q: "Sa paanong paraan nagawang makatakas ni Liongo sa kanyang pagkakakulong?", a: "Pagkanta ng isang berso", o: ["Pagkanta ng isang berso", "Pakikipaglaban sa mga bantay", "Paggamit ng mahiwagang susi", "Pagdaan sa lihim na pinto"] },
+        { q: "Sino-sino ang tanging nakakaalam sa sikreto ng kahinaan ni Liongo?", a: "Siya at ang kanyang ina", o: ["Siya at ang kanyang ina", "Ang hari at ang reyna", "Ang kanyang anak at asawa", "Ang mga kawal ng Watwa"] },
+        { q: "Anong katangian ni Liongo ang naging susi sa kanyang mga tagumpay sa digmaan?", a: "Ang pagiging di-nasusugatan", o: ["Ang pagiging di-nasusugatan", "Ang kanyang mahiwagang singsing", "Ang dami ng kanyang kawal", "Ang bilis niyang tumakbo"] },
+        { q: "Sino ang nag-udyok o nagturo kay Liongo tungkol sa paggamit ng pana?", a: "Ang mga Watwa", o: ["Ang mga Watwa", "Ang kanyang ama", "Ang hari ng Ozi", "Ang kanyang pinsan"] },
+        { q: "Bakit itinuturing na mitolohiya ang kuwento ni Liongo?", a: "Dahil sa mga supernatural na katangian ng tauhan", o: ["Dahil sa mga supernatural na katangian ng tauhan", "Dahil ito ay tungkol sa kasaysayan", "Dahil ito ay isang pabula", "Dahil ito ay nakasulat sa berso"] },
+        { q: "Sa pagtatapos ng kuwento, sino ang gumawa ng kataksilan laban kay Liongo?", a: "Ang sarili niyang anak", o: ["Ang sarili niyang anak", "Ang kanyang ina", "Ang mga tao sa Ozi", "Ang haring pinsan"] },
+        { q: "Ano ang pinakaimportanteng dapat isaisip sa pagsasaling-wika?", a: "Ang pagpapanatili ng orihinal na diwa", o: ["Ang pagpapanatili ng orihinal na diwa", "Ang paggamit ng mahihirap na salita", "Ang pagbilang ng mga letra", "Ang pag-iba ng daloy ng kwento"] },
+        { q: "Alin sa mga sumusunod ang unang dapat gawin ng isang tagapagsalin?", a: "Basahin at unawain nang buo ang teksto", o: ["Basahin at unawain nang buo ang teksto", "Maghanap agad ng diksyunaryo", "Isalin ang bawat salita nang literal", "Isulat agad ang pamagat"] },
+        { q: "Bakit kailangang maging pamilyar ang tagapagsalin sa kultura ng wikang isinasalin?", a: "Upang makuha ang tamang konteksto", o: ["Upang makuha ang tamang konteksto", "Upang madagdagan ang pahina", "Upang maging sikat ang akda", "Upang palitan ang mga pangalan"] },
+        { q: "Ano ang pangunahing mensahe ng anekdota ni Mullah Nassreddin?", a: "Ang pagkatao ay hindi nasusukat sa pananamit", o: ["Ang pagkatao ay hindi nasusukat sa pananamit", "Ang pagkain ay mahalaga sa lahat", "Ang pagiging mayaman ay dapat ipagmalaki", "Dapat laging sumunod sa uso"] },
+        { q: "Ano ang naging reaksyon ng mga tao nang makitang pinapakain ni Mullah ang kanyang damit?", a: "Nagtaka at nagulat", o: ["Nagtaka at nagulat", "Natuwa at tumawa", "Nagalit at nag-ingay", "Natakot at lumayo"] },
+        { q: "Sa kuwento ng Mongheng Mohametano, ano ang higit na mahalaga kaysa sa ritwal ng pagsamba?", a: "Ang paglilingkod sa kapwa", o: ["Ang paglilingkod sa kapwa", "Ang pag-iisa sa bundok", "Ang pagkakaroon ng ginto", "Ang pagsunod sa hari"] },
+        { q: "Ano ang naging kapansanan ni Sundiata noong siya ay bata pa?", a: "Hindi siya nakakalakad", o: ["Hindi siya nakakalakad", "Siya ay bulag", "Siya ay pipi", "Siya ay bingi"] },
+        { q: "Sino ang mapang-aping hari na tinalo ni Sundiata?", a: "Soumaoro Kanté", o: ["Soumaoro Kanté", "Maghan Kon Fatta", "Sassouma Bereté", "Dankaran Touman"] },
+        { q: "Anong bansa o rehiyon ang pinagmulan ng epiko ni Sundiata?", a: "Imperyong Mali (Afrika)", o: ["Imperyong Mali (Afrika)", "Uganda", "Kenya", "Ghana"] },
+        { q: "Anong simbolo ang ginamit upang ipakita ang lakas ni Sundiata?", a: "Bisirong-toro", o: ["Bisirong-toro", "Leon", "Agila", "Sibat"] },
+        { q: "Ano ang naging emosyon ng ina ni Sundiata nang siya ay makatayo na?", a: "Kagalakan at pagmamalaki", o: ["Kagalakan at pagmamalaki", "Takot at kaba", "Galit at lungkot", "Pagkagulat lamang"] },
+        { q: "Sa antas ng damdamin, alin ang sumusunod sa 'inis'?", a: "Galit", o: ["Galit", "Poot", "Ngitngit", "Muhi"] },
+        { q: "Ano ang tawag sa pinakamatinding antas ng poot?", a: "Ngitngit", o: ["Ngitngit", "Muhi", "Galit", "Inis"] },
+        { q: "Alin ang tamang katumbas ng 'Itaga sa bato'?", a: "Isang matibay na pangako", o: ["Isang matibay na pangako", "Paghahagis ng bato", "Pagsulat sa dingding", "Pagiging matigas ang ulo"] },
+        { q: "Ano ang pangunahing katangian ng isang di-tuwirang pahayag?", a: "Isinasalaysay lamang ang sinabi ng iba", o: ["Isinasalaysay lamang ang sinabi ng iba", "Gumagamit ito ng panipi (\"\")", "Eksaktong salita ang ginagamit", "Binabago ang buong kwento"] },
+        { q: "Sino ang nagsalin sa Filipino ng mga anekdota ni Mullah Nassreddin?", a: "Roderic P. Urgelles", o: ["Roderic P. Urgelles", "Idries Shah", "Jose Rizal", "Francisco Balagtas"] },
+        { q: "Ano ang gamit ng Semantic Mapping sa pag-aaral ng wika?", a: "Pagpapakita ng ugnayan ng mga salita", o: ["Pagpapakita ng ugnayan ng mga salita", "Pagbibilang ng mga pantig", "Pagtukoy sa baybay ng salita", "Paglikha ng bagong salita"] },
+        { q: "Kusa : Boluntaryo ; Tanggapan : ____", a: "Opisina", o: ["Opisina", "Bahay", "Paaralan", "Kalsada"] },
+        { q: "Nahimatay : Nawalan ng malay ; Nasagasaan : ____", a: "Nabundol", o: ["Nabundol", "Natumba", "Nasugatan", "Nahulog"] },
+        { q: "Punongkahoy : Tula ; 'Ang Alaga' : ____", a: "Maikling Kuwento", o: ["Maikling Kuwento", "Epiko", "Sanaysay", "Dula"] },
+        { q: "Alin sa mga sumusunod ang hindi kabilang sa grupo ng 'Kawal, Mandirigma, Gerero'?", a: "Mambabasa", o: ["Mambabasa", "Sundalo", "Lumalaban", "Tagapagtanggol"] },
+        { q: "Ano ang ibig sabihin ng salitang 'gerero'?", a: "Taong bihasa sa pakikidigma", o: ["Taong bihasa sa pakikidigma", "Taong mahilig magluto", "Taong taga-ulat ng balita", "Taong mahilig magpatawa"] },
+        { q: "Sa 'Hele ng Ina sa Kaniyang Panganay', ano ang pangarap ng ina para sa anak?", a: "Maging isang dakilang pinuno", o: ["Maging isang dakilang pinuno", "Maging isang mangangalakal", "Maging isang alipin", "Maging isang manlalakbay"] },
+        { q: "Bakit mahalaga ang paggamit ng tuwirang pahayag sa talumpati?", a: "Upang magbigay ng bigat at awtentisidad", o: ["Upang magbigay ng bigat at awtentisidad", "Upang humaba ang sasabihin", "Upang malito ang nakikinig", "Upang maging pormal lamang"] },
+        { q: "Ano ang naging papel ng mga Watwa sa buhay ni Liongo?", a: "Sila ang kumupkop at naging kakampi niya", o: ["Sila ang kumupkop at naging kakampi niya", "Sila ang pumatay sa kanya", "Sila ang nagpakulong sa kanya", "Sila ang kanyang mga kaaway"] },
+        { q: "Ano ang naging sikretong sandata ni Sundiata upang talunin ang kaaway?", a: "Isang arrow na may tuka ng manok", o: ["Isang arrow na may tuka ng manok", "Isang mahiwagang espada", "Isang gintong taming", "Isang malakas na sigaw"] },
+        { q: "Sino ang nagsulat o nagtipon ng mga kuwento ni Mullah Nassreddin?", a: "Idries Shah", o: ["Idries Shah", "Roderic Urgelles", "Nelson Mandela", "Chinua Achebe"] },
+        { q: "Ano ang ibig sabihin ng 'mabisa' sa pagsusulat ng talumpati?", a: "Nakakaabot at nakakaimpluwensya sa madla", o: ["Nakakaabot at nakakaimpluwensya sa madla", "Maraming pahina ang nagamit", "Maraming malalalim na salita", "Mabilis itong basahin"] },
+        { q: "Bakit kinatatakutan si Liongo ng haring pinsan?", a: "Dahil sa kanyang pambihirang lakas", o: ["Dahil sa kanyang pambihirang lakas", "Dahil sa kanyang yaman", "Dahil sa kanyang hitsura", "Dahil sa kanyang tinig"] },
+        { q: "Sa pagsasalin, ano ang ibig sabihin ng 'fidelity' o katapatan?", a: "Ang pagiging tapat sa orihinal na kahulugan", o: ["Ang pagiging tapat sa orihinal na kahulugan", "Ang pagkopya ng bawat titik", "Ang pagsunod sa gusto ng mambabasa", "Ang pagpapalit ng genre"] },
+        { q: "Ano ang tema ng kuwentong 'Ang Alaga'?", a: "Kahalagahan ng responsibilidad at pag-aalaga", o: ["Kahalagahan ng responsibilidad at pag-aalaga", "Pakikipagsapalaran sa dagat", "Kasaysayan ng politika", "Paggawa ng mga kagamitan"] },
+        { q: "Ano ang naging epekto ng pagtayo ni Sundiata sa kanyang pamilya?", a: "Nabalik ang dangal ng kanilang angkan", o: ["Nabalik ang dangal ng kanilang angkan", "Nagalit ang kanyang ama", "Lumayas ang kanyang ina", "Wala silang pakialam"] },
+        { q: "Bakit mahalaga ang diskurso sa pagitan ng Hari at Monghe?", a: "Upang ipakita ang tunay na kahulugan ng kababaang-loob", o: ["Upang ipakita ang tunay na kahulugan ng kababaang-loob", "Upang magkaroon ng digmaan", "Upang magpalitan ng ginto", "Upang pag-usapan ang pagkain"] },
+        { q: "Ano ang ibig sabihin ng 'di-nasusugatan'?", a: "Hindi tinatablan ng anumang armas", o: ["Hindi tinatablan ng anumang armas", "Madaling masaktan", "Palaging may sugat", "Mabilis gumaling"] },
+        { q: "Sa analohiya, ano ang ugnayan ng 'Kawal' at 'Hukbo'?", a: "Ang kawal ay bahagi ng hukbo", o: ["Ang kawal ay bahagi ng hukbo", "Ang kawal ay kaaway ng hukbo", "Ang kawal ay mas malaki sa hukbo", "Wala silang ugnayan"] },
+        { q: "Anong uri ng panitikan ang 'Hele ng Ina'?", a: "Tula", o: ["Tula", "Maikling Kuwento", "Sanaysay", "Dula"] },
+        { q: "Bakit binansagang 'Leon ng Mali' si Sundiata?", a: "Dahil sa kanyang katapangan at lakas", o: ["Dahil sa kanyang katapangan at lakas", "Dahil mukha siyang leon", "Dahil mahilig siya sa leon", "Dahil iyon ang kanyang pangalan"] },
+        { q: "Ano ang dapat suriin upang malaman ang kredibilidad ng isang anekdota?", a: "Ang awtor at pinagmulan nito", o: ["Ang awtor at pinagmulan nito", "Ang haba ng kuwento", "Ang bilang ng mga tauhan", "Ang kulay ng aklat"] },
+        { q: "Ano ang katumbas ng 'poot' sa wikang Ingles?", a: "Hatred", o: ["Hatred", "Anger", "Irritation", "Sadness"] },
+        { q: "Bakit itinuturing na bayani si Liongo?", a: "Dahil sa kanyang pakikipaglaban para sa kanyang lugar", o: ["Dahil sa kanyang pakikipaglaban para sa kanyang lugar", "Dahil siya ay mayaman", "Dahil siya ay pinsan ng hari", "Dahil siya ay marunong kumanta"] },
+        { q: "Ano ang naging papel ni Sassouma Bereté sa epiko ni Sundiata?", a: "Ang mapang-aping asawa ng hari na nagpahirap kay Sundiata", o: ["Ang mapang-aping asawa ng hari na nagpahirap kay Sundiata", "Ang mabait na ina ni Sundiata", "Ang tagapayo ni Sundiata", "Ang kaibigan ni Sundiata"] },
+        { q: "Ano ang tawag sa sining ng wastong pagbigkas at pagsulat?", a: "Balarila o Gramatika", o: ["Balarila o Gramatika", "Pagpipinta", "Musika", "Matematika"] },
+        { q: "Bakit mahalagang mag-aral ng mga panitikan mula sa Afrika?", a: "Upang maunawaan ang kanilang mayamang kultura at tradisyon", o: ["Upang maunawaan ang kanilang mayamang kultura at tradisyon", "Upang matutong magsalita ng kanilang wika", "Upang pumunta sa kanilang bansa", "Upang maging sikat sa paaralan"] }
+    ];
+
+    let currentQ = 0;
+    let score = 0;
+
+    function initQuiz() {
+        // Shuffle the 50 unique questions
+        rawData.sort(() => Math.random() - 0.5);
+        displayQ();
+    }
+
+    function displayQ() {
+        const item = rawData[currentQ];
+        document.getElementById('current-idx').innerText = currentQ + 1;
+        document.getElementById('question-box').innerText = item.q;
+        
+        const choicesUi = document.getElementById('choices-ui');
+        choicesUi.innerHTML = '';
+
+        // Randomize A-D distribution
+        let currentOptions = [...item.o].sort(() => Math.random() - 0.5);
+
+        currentOptions.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'btn-choice';
+            btn.innerText = opt;
+            btn.onclick = () => {
+                if(opt === item.a) score++;
+                currentQ++;
+                if(currentQ < 50) displayQ();
+                else showFinal();
+            };
+            choicesUi.appendChild(btn);
+        });
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-ui').style.display = 'none';
+        document.getElementById('result-screen').style.display = 'block';
+        document.getElementById('score-val').innerText = score + " / 50";
+
+        const recBox = document.getElementById('rec-val');
+        let message = "";
+
+        if(score >= 45) {
+            message = "<strong>REKOMENDASYON:</strong> Napakahusay! Halos perpekto mo nang nakuha ang mga konsepto. Handa ka na para sa iyong pagsusulit.";
+        } else if(score >= 35) {
+            message = "<strong>REKOMENDASYON:</strong> Magaling! Balikan mo lamang ang mga bahagi tungkol sa <em>Antas ng Damdamin</em> at <em>Pagsasaling-wika</em> para mas tumibay ang iyong kaalaman.";
+        } else if(score >= 25) {
+            message = "<strong>REKOMENDASYON:</strong> Maayos ang iyong iskor. Iminumungkahi na basahin muli ang mga detalye ng <em>Epiko ni Sundiata</em> at ang mga <em>Tuwiran at Di-tuwirang pahayag</em>.";
+        } else {
+            message = "<strong>REKOMENDASYON:</strong> Kailangan mo pang mag-review nang mabuti. Pagtuunan ng pansin ang pag-unawa sa mga <em>Mitolohiya at Anekdota</em>. Huwag mawalan ng pag-asa!";
+        }
+        recBox.innerHTML = message;
+    }
+
+    initQuiz();
+</script>
+
+</body>
+</html>
